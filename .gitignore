@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Reasoning cache
+reasoning_content.sqlite3
+reasoning_content.sqlite3-wal
+reasoning_content.sqlite3-shm
+
+# Trace dumps
+trace-dumps/
+
+# Env
+.env
+.env.*

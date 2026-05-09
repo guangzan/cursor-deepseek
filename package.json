@@ -1,0 +1,39 @@
+{
+  "name": "deepseek-lane-monorepo",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Monorepo for deepseek-lane proxy",
+  "type": "module",
+  "scripts": {
+    "stop": "node packages/cli/dist/cli.mjs stop",
+    "restart": "node packages/cli/dist/cli.mjs restart",
+    "status": "node packages/cli/dist/cli.mjs status",
+    "log": "node packages/cli/dist/cli.mjs log",
+    "upgrade": "node packages/cli/dist/cli.mjs upgrade",
+    "dev": "vp run --filter deepseek-lane dev",
+    "build": "vp run --filter deepseek-lane build",
+    "check": "vp check",
+    "lint": "vp lint",
+    "fmt": "vp fmt",
+    "test": "vp test",
+    "typecheck": "vp check",
+    "release": "tsx scripts/release.ts",
+    "publish-ci": "tsx scripts/publish-ci.ts"
+  },
+  "devDependencies": {
+    "bumpp": "^10.3.2",
+    "changelogithub": "^14.0.0",
+    "tinyglobby": "^0.2.15",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vite-plus": "latest",
+    "zx": "^8.8.5"
+  },
+  "packageManager": "pnpm@10.33.2",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild"
+    ]
+  }
+}
