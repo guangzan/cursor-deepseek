@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vite-plus/test";
+import { describe, it, expect, vi } from "vite-plus/test";
 import { createApp } from "../server.js";
 import { ReasoningStore } from "../reasoning-store.js";
 import { ProxyConfig } from "../types.js";
@@ -124,5 +124,36 @@ describe("POST /v1/chat/completions", () => {
       body: JSON.stringify(bigPayload),
     });
     expect(res.status).toBe(413);
+  });
+
+  it("accepts valid non-streaming request", async () => {
+    const mockResponse = new Response(
+      JSON.stringify({
+        id: "test-1",
+        object: "chat.completion",
+        model: "deepseek-v4-pro",
+        choices: [{ index: 0, message: { role: "assistant", content: "Hello!" } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockResponse));
+
+    const { app } = createTestApp();
+    const res = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-key",
+      },
+      body: JSON.stringify({ messages: [{ role: "user", content: "hi" }] }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.model).toBe("deepseek-v4-pro");
+    expect(body.choices[0].message.content).toBe("Hello!");
+
+    vi.unstubAllGlobals();
   });
 });

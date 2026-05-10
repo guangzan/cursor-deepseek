@@ -326,3 +326,99 @@ describe("rewriteResponseBody", () => {
     expect(decoded.choices[0].message.content).toContain("</details>");
   });
 });
+
+describe("prepareUpstreamRequest recovery edge cases", () => {
+  const config: ProxyConfig = { ...defaultConfig, missingReasoningStrategy: "recover" };
+
+  it("recovers from multiple missing reasoning messages", () => {
+    const store = new ReasoningStore(":memory:");
+    const payload = {
+      messages: [
+        { role: "system", content: "You are helpful." },
+        { role: "user", content: "hello" },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [{ id: "call_1", function: { name: "search", arguments: "{}" } }],
+        },
+        { role: "tool", content: "result 1", tool_call_id: "call_1" },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [{ id: "call_2", function: { name: "search", arguments: "{}" } }],
+        },
+        { role: "tool", content: "result 2", tool_call_id: "call_2" },
+        { role: "user", content: "follow up" },
+      ],
+    };
+    const result = prepareUpstreamRequest(payload, config, store);
+    expect(result.recoveredReasoningMessages).toBeGreaterThanOrEqual(0);
+    expect(result.recoveryNotice).toBeTruthy();
+    expect(result.recoveryDroppedMessages).toBeGreaterThan(0);
+    store.close();
+  });
+
+  it("keeps system messages at start after recovery", () => {
+    const store = new ReasoningStore(":memory:");
+    const payload = {
+      messages: [
+        { role: "system", content: "You are helpful." },
+        { role: "system", content: "Always be concise." },
+        { role: "user", content: "hello" },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [{ id: "call_1", function: { name: "test", arguments: "{}" } }],
+        },
+        { role: "tool", content: "result", tool_call_id: "call_1" },
+        { role: "user", content: "follow up" },
+      ],
+    };
+    const result = prepareUpstreamRequest(payload, config, store);
+    const msgs = result.payload.messages as any[];
+    expect(msgs[0].role).toBe("system");
+    expect(msgs[0].content).toBe("You are helpful.");
+    expect(msgs[1].role).toBe("system");
+    expect(msgs[1].content).toBe("Always be concise.");
+    store.close();
+  });
+
+  it("reject strategy returns missingReasoningMessages without recovery", () => {
+    const rejectConfig: ProxyConfig = { ...defaultConfig, missingReasoningStrategy: "reject" };
+    const payload = {
+      messages: [
+        { role: "user", content: "hi" },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [{ id: "call_1", function: { name: "test", arguments: "{}" } }],
+        },
+        { role: "tool", content: "result", tool_call_id: "call_1" },
+        { role: "user", content: "follow up" },
+      ],
+    };
+    const result = prepareUpstreamRequest(payload, rejectConfig, null);
+    expect(result.missingReasoningMessages).toBeGreaterThanOrEqual(1);
+    expect(result.recoveryNotice).toBeNull();
+    expect(result.recoveredReasoningMessages).toBe(0);
+  });
+
+  it("handles messages with only system role (no recovery needed)", () => {
+    const payload = {
+      messages: [
+        { role: "system", content: "Be helpful." },
+        { role: "user", content: "hello" },
+      ],
+    };
+    const result = prepareUpstreamRequest(payload, config, null);
+    expect(result.missingReasoningMessages).toBe(0);
+    expect(result.recoveryNotice).toBeNull();
+  });
+
+  it("sets thinking type for disabled config", () => {
+    const disabledConfig = { ...defaultConfig, thinking: "disabled" as const };
+    const payload = { messages: [{ role: "user", content: "hi" }] };
+    const result = prepareUpstreamRequest(payload, disabledConfig, null);
+    expect(result.payload.thinking).toEqual({ type: "disabled" });
+  });
+});
