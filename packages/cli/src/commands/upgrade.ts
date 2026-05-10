@@ -4,7 +4,7 @@ import { execSync } from "child_process";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const pkg = require("../../package.json") as { version: string };
+const pkg = require("../package.json") as { version: string };
 const currentVersion = pkg.version;
 
 const REGISTRY_URL = "https://registry.npmjs.org/deepseek-lane/latest";
