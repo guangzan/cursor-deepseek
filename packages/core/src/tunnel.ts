@@ -58,6 +58,7 @@ export class NgrokTunnel {
   private process: ChildProcess | null = null;
   private targetUrl: string;
   private apiUrl: string;
+  private sigkillTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(targetUrl: string, apiUrl = NGROK_API_URL) {
     this.targetUrl = targetUrl;
@@ -69,12 +70,6 @@ export class NgrokTunnel {
       stdio: "ignore",
     });
 
-    this.process.on("exit", (code) => {
-      if (code !== 0 && code !== null) {
-        // waitForPublicUrl will detect the exit code and throw
-      }
-    });
-
     return this.waitForPublicUrl();
   }
 
@@ -83,10 +78,6 @@ export class NgrokTunnel {
     let lastError = "ngrok did not report a public URL";
 
     while (Date.now() < deadline) {
-      if (this.process?.exitCode !== null && this.process?.exitCode !== undefined) {
-        throw new Error("ngrok exited before creating a tunnel");
-      }
-
       try {
         const apiEndpoints = [`${this.apiUrl}/endpoints`, `${this.apiUrl}/tunnels`];
 
@@ -103,6 +94,12 @@ export class NgrokTunnel {
         lastError = String(e);
       }
 
+      // Check exit code AFTER the API call to avoid throwing
+      // right after a successful fetch
+      if (this.process?.exitCode !== null && this.process?.exitCode !== undefined) {
+        throw new Error("ngrok exited before creating a tunnel");
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
 
@@ -110,9 +107,13 @@ export class NgrokTunnel {
   }
 
   stop() {
+    if (this.sigkillTimer) {
+      clearTimeout(this.sigkillTimer);
+      this.sigkillTimer = null;
+    }
     if (this.process && !this.process.killed) {
       this.process.kill("SIGTERM");
-      setTimeout(() => {
+      this.sigkillTimer = setTimeout(() => {
         if (this.process && !this.process.killed) {
           this.process.kill("SIGKILL");
         }

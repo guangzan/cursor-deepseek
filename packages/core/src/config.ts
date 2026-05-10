@@ -2,11 +2,12 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync, chmodSync } from "f
 import { resolve, dirname } from "path";
 import { homedir } from "os";
 import { load } from "js-yaml";
-import { ProxyConfig } from "./types.js";
+import { ProxyConfigSchema } from "./schemas.js";
+import type { ProxyConfig, CliArgs } from "./types.js";
 
-const APP_DIR = resolve(homedir(), ".deepseek-lane");
-const CONFIG_PATH = resolve(APP_DIR, "config.yaml");
-const REASONING_CONTENT_PATH = resolve(APP_DIR, "reasoning_content.sqlite3");
+export const APP_DIR = resolve(homedir(), ".deepseek-lane");
+export const CONFIG_PATH = resolve(APP_DIR, "config.yaml");
+export const REASONING_CONTENT_PATH = resolve(APP_DIR, "reasoning_content.sqlite3");
 
 const DEFAULT_CONFIG_TEXT = `# deepseek-lane config
 # API keys are read from Cursor's Authorization header and forwarded upstream.
@@ -31,28 +32,6 @@ reasoning_cache_max_age_seconds: 2592000
 reasoning_cache_max_rows: 100000
 `;
 
-export interface CliArgs {
-  config?: string;
-  host?: string;
-  port?: number;
-  model?: string;
-  baseUrl?: string;
-  thinking?: "enabled" | "disabled";
-  reasoningEffort?: string;
-  ngrok?: boolean;
-  verbose?: boolean;
-  displayReasoning?: boolean;
-  collapsibleReasoning?: boolean;
-  requestTimeout?: number;
-  maxRequestBodyBytes?: number;
-  missingReasoningStrategy?: "recover" | "reject";
-  noNgrok?: boolean;
-  noVerbose?: boolean;
-  noDisplayReasoning?: boolean;
-  noCollapsibleReasoning?: boolean;
-  clearReasoningCache?: boolean;
-}
-
 function loadYamlConfig(configPath: string): Record<string, unknown> {
   if (!existsSync(configPath)) {
     const dir = dirname(configPath);
@@ -75,88 +54,83 @@ export function createConfig(cliArgs: CliArgs): ProxyConfig {
   const fromFile = (key: string, def: unknown): unknown =>
     fileConfig[key] !== undefined ? fileConfig[key] : def;
 
-  const strVal = (v: unknown, def: string): string => {
-    if (v === undefined || v === null) return def;
-    if (typeof v === "string") return v;
-    return JSON.stringify(v) ?? def;
-  };
-
-  const boolVal = (v: unknown, def: boolean): boolean => {
-    if (v === undefined || v === null) return def;
-    if (typeof v === "boolean") return v;
-    const s = (typeof v === "string" ? v : JSON.stringify(v)).toLowerCase();
-    if (["1", "true", "yes", "on"].includes(s)) return true;
-    if (["0", "false", "no", "off"].includes(s)) return false;
-    return def;
-  };
-
-  const intVal = (v: unknown, def: number): number => {
-    if (v === undefined || v === null) return def;
-    const n = Number(v);
-    return Number.isInteger(n) ? n : def;
-  };
-
-  const floatVal = (v: unknown, def: number): number => {
-    if (v === undefined || v === null) return def;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : def;
-  };
-
-  const thinking = (v: unknown): "enabled" | "disabled" => {
-    const s = strVal(v, "enabled").toLowerCase();
-    return s === "enabled" || s === "disabled" ? s : "enabled";
-  };
-
-  const effort = strVal(
-    cliArgs.reasoningEffort ?? fromFile("reasoning_effort", "medium"),
-    "medium",
+  const reasoningContentPathVal = String(
+    fromFile("reasoning_content_path", REASONING_CONTENT_PATH),
   );
+
+  let thinking: string;
+  if (cliArgs.thinking !== undefined) {
+    thinking = cliArgs.thinking;
+  } else {
+    const fileThinking = fromFile("thinking", "enabled");
+    thinking = String(fileThinking).toLowerCase();
+  }
+
+  if (thinking === "disabled") {
+    thinking = "disabled";
+  } else {
+    thinking = "enabled";
+  }
+
+  let reasoningEffort: string;
+  if (cliArgs.reasoningEffort !== undefined) {
+    reasoningEffort = cliArgs.reasoningEffort.toLowerCase();
+  } else {
+    reasoningEffort = String(fromFile("reasoning_effort", "medium")).toLowerCase();
+  }
+
   const validEfforts = ["low", "medium", "high", "max", "xhigh"];
-  const reasoningEffort = validEfforts.includes(effort) ? effort : "medium";
+  const validatedReasoningEffort = validEfforts.includes(reasoningEffort)
+    ? reasoningEffort
+    : "medium";
 
-  return {
-    host: strVal(cliArgs.host ?? fromFile("host", "127.0.0.1"), "127.0.0.1"),
-    port: intVal(cliArgs.port ?? fromFile("port", 19199), 19199),
-    upstreamBaseUrl: strVal(
-      cliArgs.baseUrl ?? fromFile("base_url", "https://opencode.ai/zen/go/v1"),
-      "https://opencode.ai/zen/go/v1",
-    ).replace(/\/+$/, ""),
-    upstreamModel: strVal(cliArgs.model ?? fromFile("model", "deepseek-v4-pro"), "deepseek-v4-pro"),
-    thinking: thinking(cliArgs.thinking ?? fromFile("thinking", "enabled")),
-    reasoningEffort,
-    requestTimeout: floatVal(cliArgs.requestTimeout ?? fromFile("request_timeout", 300), 300),
-    maxRequestBodyBytes: intVal(
-      cliArgs.maxRequestBodyBytes ?? fromFile("max_request_body_bytes", 20 * 1024 * 1024),
-      20 * 1024 * 1024,
-    ),
-    reasoningContentPath: strVal(
-      fromFile("reasoning_content_path", REASONING_CONTENT_PATH),
-      REASONING_CONTENT_PATH,
-    ),
-    missingReasoningStrategy: (() => {
-      const s = strVal(
-        cliArgs.missingReasoningStrategy ?? fromFile("missing_reasoning_strategy", "recover"),
-        "recover",
-      ).toLowerCase();
-      return s === "recover" || s === "reject" ? s : "recover";
-    })(),
-    reasoningCacheMaxAgeSeconds: intVal(
-      fromFile("reasoning_cache_max_age_seconds", 30 * 24 * 60 * 60),
-      30 * 24 * 60 * 60,
-    ),
-    reasoningCacheMaxRows: intVal(fromFile("reasoning_cache_max_rows", 100000), 100000),
-    displayReasoning:
-      cliArgs.displayReasoning !== undefined
-        ? cliArgs.displayReasoning
-        : boolVal(fromFile("display_reasoning", true), true),
-    collapsibleReasoning:
-      cliArgs.collapsibleReasoning !== undefined
-        ? cliArgs.collapsibleReasoning
-        : boolVal(fromFile("collapsible_reasoning", fromFile("collasible_reasoning", true)), true),
-    ngrok: cliArgs.ngrok !== undefined ? cliArgs.ngrok : boolVal(fromFile("ngrok", true), true),
-    verbose:
-      cliArgs.verbose !== undefined ? cliArgs.verbose : boolVal(fromFile("verbose", false), false),
-  };
+  let missingReasoningStrategy: string;
+  if (cliArgs.missingReasoningStrategy !== undefined) {
+    missingReasoningStrategy = cliArgs.missingReasoningStrategy.toLowerCase();
+  } else {
+    missingReasoningStrategy = String(
+      fromFile("missing_reasoning_strategy", "recover"),
+    ).toLowerCase();
+  }
+
+  const validStrategies = ["recover", "reject"];
+  const validatedMissingReasoningStrategy = validStrategies.includes(missingReasoningStrategy)
+    ? missingReasoningStrategy
+    : "recover";
+
+  const rawConfig: Record<string, unknown> = {};
+
+  rawConfig.host = cliArgs.host ?? fromFile("host", "127.0.0.1");
+  rawConfig.port = cliArgs.port ?? fromFile("port", 19199);
+  rawConfig.upstreamBaseUrl = (
+    cliArgs.baseUrl ?? (fromFile("base_url", "https://opencode.ai/zen/go/v1") as string)
+  )
+    .toString()
+    .replace(/\/+$/, "");
+  rawConfig.upstreamModel = cliArgs.model ?? fromFile("model", "deepseek-v4-pro");
+  rawConfig.thinking = thinking;
+  rawConfig.reasoningEffort = validatedReasoningEffort;
+  rawConfig.requestTimeout = cliArgs.requestTimeout ?? fromFile("request_timeout", 300);
+  rawConfig.maxRequestBodyBytes =
+    cliArgs.maxRequestBodyBytes ?? fromFile("max_request_body_bytes", 20 * 1024 * 1024);
+  rawConfig.reasoningContentPath = reasoningContentPathVal;
+  rawConfig.missingReasoningStrategy = validatedMissingReasoningStrategy;
+  rawConfig.reasoningCacheMaxAgeSeconds = fromFile(
+    "reasoning_cache_max_age_seconds",
+    30 * 24 * 60 * 60,
+  );
+  rawConfig.reasoningCacheMaxRows = fromFile("reasoning_cache_max_rows", 100000);
+  rawConfig.displayReasoning =
+    cliArgs.displayReasoning !== undefined
+      ? cliArgs.displayReasoning
+      : fromFile("display_reasoning", true);
+  rawConfig.collapsibleReasoning =
+    cliArgs.collapsibleReasoning !== undefined
+      ? cliArgs.collapsibleReasoning
+      : // Backward-compat: "collasible" was a typo in older config versions
+        fromFile("collapsible_reasoning", fromFile("collasible_reasoning", true));
+  rawConfig.ngrok = cliArgs.ngrok !== undefined ? cliArgs.ngrok : fromFile("ngrok", true);
+  rawConfig.verbose = cliArgs.verbose !== undefined ? cliArgs.verbose : fromFile("verbose", false);
+
+  return ProxyConfigSchema.parse(rawConfig);
 }
-
-export { APP_DIR, CONFIG_PATH, REASONING_CONTENT_PATH };

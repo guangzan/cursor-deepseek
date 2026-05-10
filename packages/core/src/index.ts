@@ -1,5 +1,4 @@
 export { createConfig, APP_DIR, CONFIG_PATH } from "./config.js";
-export type { CliArgs } from "./config.js";
 export {
   log,
   logInfo,
@@ -40,4 +39,5 @@ export type {
   ChatChoice,
   PreparedRequest,
   ReasoningLookupKey,
+  CliArgs,
 } from "./types.js";

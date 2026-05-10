@@ -1,9 +1,12 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { streamSSE } from "hono/streaming";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { serve } from "@hono/node-server";
+import type { Ora } from "ora";
 import { ProxyConfig, ChatMessage } from "./types.js";
+import type { PreparedRequest } from "./schemas.js";
 import { ReasoningStore, conversationScope } from "./reasoning-store.js";
 import { prepareUpstreamRequest, rewriteResponseBody } from "./transform.js";
 import { StreamAccumulator, CursorReasoningDisplayAdapter } from "./streaming.js";
@@ -201,7 +204,14 @@ export function createApp(config: ProxyConfig, store: ReasoningStore) {
       if (!upstreamRes.ok) {
         const errorBody = await upstreamRes.text();
         logWarn(`upstream error status=${upstreamRes.status} elapsed=${Date.now() - started}ms`);
-        return c.json(JSON.parse(errorBody), upstreamRes.status as ContentfulStatusCode);
+        try {
+          return c.json(JSON.parse(errorBody), upstreamRes.status as ContentfulStatusCode);
+        } catch {
+          return c.json(
+            { error: { message: `Upstream returned status ${upstreamRes.status}` } },
+            upstreamRes.status as ContentfulStatusCode,
+          );
+        }
       }
 
       if (isStream) {
@@ -224,12 +234,12 @@ export function createApp(config: ProxyConfig, store: ReasoningStore) {
 }
 
 async function handleStreamingResponse(
-  c: any,
+  c: Context,
   upstreamRes: Response,
-  prepared: any,
+  prepared: PreparedRequest,
   config: ProxyConfig,
   store: ReasoningStore,
-  spinner: any,
+  spinner: Ora,
 ): Promise<Response> {
   return streamSSE(c, async (stream) => {
     let usage: UsageInfo | undefined;
@@ -351,9 +361,9 @@ async function handleStreamingResponse(
 }
 
 async function handleRegularResponse(
-  c: any,
+  c: Context,
   upstreamRes: Response,
-  prepared: any,
+  prepared: PreparedRequest,
   config: ProxyConfig,
   store: ReasoningStore,
   started: number,

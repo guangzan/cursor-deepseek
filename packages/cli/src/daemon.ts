@@ -25,7 +25,7 @@ export function readPid(): number | null {
     }
   } catch {}
   try {
-    const stdout = execSync('pgrep -f "deepseek-lane.*start"', { encoding: "utf-8" });
+    const stdout = execSync('pgrep -f "^node.*deepseek-lane.*start"', { encoding: "utf-8" });
     const lines = stdout.trim().split("\n").filter(Boolean).map(Number);
     if (lines.length > 0) return lines[lines.length - 1];
   } catch {}

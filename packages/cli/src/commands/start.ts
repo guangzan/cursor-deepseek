@@ -106,6 +106,7 @@ async function startAction(rawOpts: Record<string, unknown>) {
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
 
+    // Keep the process alive until SIGINT/SIGTERM
     await new Promise(() => {});
   } catch (err) {
     p.log.error(`Failed to start: ${String(err)}`);
@@ -299,7 +300,8 @@ function parseArgs(rawOpts: Record<string, unknown>): CliArgs {
   if (rawOpts.model) args.model = rawOpts.model as string;
   if (rawOpts.baseUrl) args.baseUrl = rawOpts.baseUrl as string;
   if (rawOpts.thinking) args.thinking = rawOpts.thinking as "enabled" | "disabled";
-  if (rawOpts.reasoningEffort) args.reasoningEffort = rawOpts.reasoningEffort as string;
+  if (rawOpts.reasoningEffort)
+    args.reasoningEffort = rawOpts.reasoningEffort as "low" | "medium" | "high" | "max" | "xhigh";
   if (rawOpts.requestTimeout) args.requestTimeout = rawOpts.requestTimeout as number;
   if (rawOpts.maxRequestBodyBytes) args.maxRequestBodyBytes = rawOpts.maxRequestBodyBytes as number;
   if (rawOpts.missingReasoningStrategy)

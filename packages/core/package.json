@@ -16,7 +16,8 @@
     "chalk": "^5.4.0",
     "hono": "^4.7.0",
     "js-yaml": "^4.1.0",
-    "ora": "^8.2.0"
+    "ora": "^8.2.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",

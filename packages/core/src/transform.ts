@@ -602,6 +602,8 @@ function assistantNeedsReasoningForToolContext(
   return false;
 }
 
+// Pass through deepseek- prefixed models as-is, otherwise use the configured
+// default model. OpenCode AI and other upstream providers accept deepseek- models.
 function upstreamModelFor(originalModel: string, config: ProxyConfig): string {
   if (originalModel.startsWith("deepseek-")) return originalModel;
   return config.upstreamModel;
