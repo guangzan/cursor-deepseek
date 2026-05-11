@@ -224,9 +224,9 @@ async function main() {
   // 4. CORS headers present
   console.log("GET /v1/models (CORS check)");
   try {
-    // Use the response from the previous models fetch if available,
-    // otherwise make a fresh GET request.
-    const res = modelsResponse ?? (await fetch(`http://127.0.0.1:${port}/v1/models`));
+    const res = await fetch(`http://127.0.0.1:${port}/v1/models`, {
+      headers: { Origin: "http://localhost" },
+    });
     const corsHeader = res.headers.get("access-control-allow-origin");
     if (corsHeader === "*") {
       logPass("CORS header access-control-allow-origin: *");
