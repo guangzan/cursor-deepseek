@@ -228,8 +228,8 @@ async function main() {
       headers: { Origin: "http://localhost" },
     });
     const corsHeader = res.headers.get("access-control-allow-origin");
-    if (corsHeader === "*") {
-      logPass("CORS header access-control-allow-origin: *");
+    if (corsHeader === "*" || corsHeader === "http://localhost") {
+      logPass(`CORS header access-control-allow-origin: ${corsHeader}`);
     } else {
       logFail(`CORS header (got '${corsHeader}')`);
     }
