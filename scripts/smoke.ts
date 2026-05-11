@@ -119,15 +119,7 @@ async function main() {
 
   childProcess = spawn(
     "node",
-    [
-      cli,
-      "start",
-      "--no-interactive",
-      `--port=${port}`,
-      "--host=127.0.0.1",
-      "--no-ngrok",
-      "--verbose=false",
-    ],
+    [cli, "start", "--no-interactive", `--port=${port}`, "--host=127.0.0.1", "--no-ngrok"],
     {
       stdio: "inherit",
     },
