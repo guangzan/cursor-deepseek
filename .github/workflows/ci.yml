@@ -53,6 +53,7 @@ jobs:
           cache: true
 
       - run: vp install
+      - run: vp run build
       - run: vp test -- integration
 
   e2e-test:
@@ -83,4 +84,4 @@ jobs:
 
       - run: vp install
       - run: vp run build
-      - run: tsx scripts/smoke.ts
+      - run: pnpm smoke
