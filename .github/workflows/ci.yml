@@ -53,14 +53,7 @@ jobs:
           cache: true
 
       - run: vp install
-      - run: vp test -- packages/*/src/__tests__/integration/**/*.test.ts --coverage
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-integration
-          path: coverage/
-          if-no-files-found: ignore
+      - run: vp test -- packages/*/src/__tests__/integration/**/*.test.ts
 
   e2e-test:
     needs: [check]
@@ -75,14 +68,7 @@ jobs:
 
       - run: vp install
       - run: vp run build
-      - run: vp test -- tests/e2e/**/*.test.ts --coverage
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-e2e
-          path: coverage/
-          if-no-files-found: ignore
+      - run: vp test -- tests/e2e/**/*.test.ts
 
   smoke-test:
     needs: [check]
