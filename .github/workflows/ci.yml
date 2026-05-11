@@ -83,4 +83,4 @@ jobs:
 
       - run: vp install
       - run: vp run build
-      - run: bash scripts/smoke.sh
+      - run: tsx scripts/smoke.ts

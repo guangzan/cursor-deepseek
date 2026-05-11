@@ -16,6 +16,7 @@
     "lint": "vp lint",
     "fmt": "vp fmt",
     "test": "vp test",
+    "smoke": "tsx scripts/smoke.ts",
     "typecheck": "vp check",
     "release": "tsx scripts/release.ts",
     "publish-ci": "tsx scripts/publish-ci.ts"
