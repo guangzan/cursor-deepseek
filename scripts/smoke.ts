@@ -129,13 +129,9 @@ async function main() {
       "--verbose=false",
     ],
     {
-      stdio: "pipe",
+      stdio: "inherit",
     },
   );
-
-  // Drain stdout / stderr so the process doesn't hang on buffer full
-  childProcess.stdout?.on("data", () => {});
-  childProcess.stderr?.on("data", () => {});
 
   childProcess.on("exit", (code) => {
     if (code !== null && code !== 0 && childProcess) {
