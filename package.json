@@ -21,6 +21,7 @@
     "publish-ci": "tsx scripts/publish-ci.ts"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.5",
     "bumpp": "^10.3.2",
     "changelogithub": "^14.0.0",
     "tinyglobby": "^0.2.15",

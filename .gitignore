@@ -13,3 +13,4 @@ trace-dumps/
 # Env
 .env
 .env.*
+coverage/

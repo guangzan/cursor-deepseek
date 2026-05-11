@@ -21,16 +21,21 @@ const startCmd = new Command("start")
   .option("-d, --detach", "Run in background")
   .option("--config <path>", "Config file path")
   .option("--host <host>", "Bind host", "127.0.0.1")
-  .option("--port <port>", "Bind port", parseInt, 19199)
+  .option("--port <port>", "Bind port", (v: string) => parseInt(v, 10), 19199)
   .option("--model <model>", "Default model", "deepseek-v4-pro")
   .option("--base-url <url>", "Upstream API base URL")
   .option("--thinking <mode>", "Thinking mode: enabled|disabled", "enabled")
   .option("--reasoning-effort <level>", "Reasoning effort: low|medium|high|max|xhigh", "medium")
-  .option("--request-timeout <seconds>", "Upstream request timeout", parseFloat, 300)
+  .option(
+    "--request-timeout <seconds>",
+    "Upstream request timeout",
+    (v: string) => parseFloat(v),
+    300,
+  )
   .option(
     "--max-request-body-bytes <bytes>",
     "Max request body size (default 20MB)",
-    parseInt,
+    (v: string) => parseInt(v, 10),
     20971520,
   )
   .option(
